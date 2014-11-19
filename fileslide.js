@@ -3,12 +3,17 @@ Slideshow = new Mongo.Collection('slideshow')
 
 FileSlide = {
   path: function () {
+    var Path = Meteor.npmRequire('path')
     var path = process.env.IMAGES
     if (path == undefined) {
       console.log("You must specify a path to the image folder with the ENV variable IMAGES. Example:")
       console.log('IMAGES="~/Documents/Images/" meteor')
     }
-    return path
+    var resolvedPath = Path.resolve(path)
+    this.path = function () {
+      return resolvedPath
+    } 
+    return resolvedPath
   },
   last: function () {
     return Images.findOne({}, {sort: {order: -1}})
@@ -37,6 +42,8 @@ FileSlide = {
     diskFiles = diskFiles.map(mapFunc)
     dbFiles = dbFiles.map(mapFunc)
     
+    console.log("Merging", diskFiles, dbFiles)
+    
     diskFiles.map(function (path) {
       if (dbFiles.indexOf(path) === -1) {
         FileSlide.add(path);
@@ -56,7 +63,7 @@ FileSlide = {
   },
   fileName: function (filePath) {
     var Path = Meteor.npmRequire('path')
-    return Path.basename(filePath)
+    return filePath.replace(this.path() + "/", "")
   },
   images: function (page) {
     return Images.find().fetch()
@@ -214,7 +221,31 @@ if (Meteor.isServer) {
     // Enumerate existing
     var loadExisting = function (path, done) {
       var fs = Meteor.npmRequire("fs")
-      fs.readdir(path, BIND(function (err, files) {
+      var walk = function(dir, done) {
+        var results = [];
+        fs.readdir(dir, function(err, list) {
+          if (err) return done(err);
+          var i = 0;
+          (function next() {
+            var file = list[i++];
+            if (!file) return done(null, results);
+            file = Path.join(dir, file);
+            fs.stat(file, function(err, stat) {
+              if (stat && stat.isDirectory()) {
+                walk(file, function(err, res) {
+                  results = results.concat(res);
+                  next();
+                });
+              } else {
+                results.push(file);
+                next();
+              }
+            });
+          })();
+        });
+      };
+      
+      walk(path, BIND(function (err, files) {
         dbImages = FileSlide.images().map(function (image) {
           return image.path
         })

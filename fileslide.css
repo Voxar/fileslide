@@ -1,0 +1,29 @@
+/* CSS declarations go here */
+body {
+  margin: 0;
+  padding: 0;
+  color: white;
+  background-color: black;
+}
+
+#cache {
+  display:none;
+}
+body {
+  position: fixed; 
+  top: -50%; 
+  left: -50%; 
+  width: 200%; 
+  height: 200%;
+}
+body img {
+  display:none;
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  bottom: 0; 
+  margin: auto; 
+  min-width: 50%;
+  min-height: 50%;
+}

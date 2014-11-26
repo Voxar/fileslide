@@ -155,8 +155,8 @@ if (Meteor.isClient) {
     })
     
     var showImage = function (image) {
-      var hidden = live.find("img.hidden");
-      var visible = live.find("img:not(.hidden)");
+      var hidden = live.find("img.hidden:first");
+      var visible = live.find("img:not(.hidden):last");
       
       var newSrc = "/images/" + image.path;
       var oldSrc = visible.attr("src");

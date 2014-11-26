@@ -1,6 +1,11 @@
 Images = new Mongo.Collection('images');
 Slideshow = new Mongo.Collection('slideshow')
 
+Router.route("/:name", function (name) {
+  console.log(this.params.name)
+  Session.set("name", this.params.name)
+})
+
 FileSlide = {
   path: function () {
     var Path = Meteor.npmRequire('path')
@@ -10,9 +15,9 @@ FileSlide = {
       console.log('IMAGES="~/Documents/Images/" meteor')
     }
     var resolvedPath = Path.resolve(path)
-    this.path = function () {
-      return resolvedPath
-    } 
+    // this.path = function () {
+    //   return resolvedPath
+    // }
     return resolvedPath
   },
   last: function () {
@@ -21,18 +26,19 @@ FileSlide = {
   add: function (path) {
     var fs = Meteor.npmRequire('fs')
     if (this.isImage(path)) {
-      var name = FileSlide.fileName(path)
+      var pos = FileSlide.fileName(path)
       var last = FileSlide.last()
       var order = last === undefined ? 0 : last.order + 1
-      console.log("adding file", path, name, order)
+      console.log("adding file", path, pos.name, pos.path, order)
       Images.insert({
-        path: name,
+        name: pos.name,
+        path: pos.path,
         order: order
       })
     }
   },
   remove: function (path) {
-    Images.remove({path: this.fileName(path)})
+    Images.remove({path: this.fileName(path).path})
     Images.remove({path: path})
   },
   merge: function (diskFiles, dbFiles) {
@@ -44,15 +50,15 @@ FileSlide = {
     
     console.log("Merging", diskFiles, dbFiles)
     
-    diskFiles.map(function (path) {
-      if (dbFiles.indexOf(path) === -1) {
-        FileSlide.add(path);
+    diskFiles.map(function (pos) {
+      if (dbFiles.indexOf(pos) === -1) {
+        FileSlide.add(pos.path);
       }
     })
     
-    dbFiles.map(function (path) {
-      if (diskFiles.indexOf(path) === -1) {
-        FileSlide.remove(path);
+    dbFiles.map(function (pos) {
+      if (diskFiles.indexOf(pos) === -1) {
+        FileSlide.remove(pos.path);
       }
     })
   },
@@ -63,7 +69,9 @@ FileSlide = {
   },
   fileName: function (filePath) {
     var Path = Meteor.npmRequire('path')
-    return filePath.replace(this.path() + "/", "")
+    var path = filePath.replace(this.path() + "/", "")
+    var name = "name"  
+      return {path: path, name: name}
   },
   images: function (page) {
     return Images.find().fetch()
@@ -89,7 +97,8 @@ if (Meteor.isClient) {
   });
   
   Meteor.autorun(function () {
-    var images = Slideshow.find({}, {sort: {i: 1}}).fetch();
+    var name = Session.get("name")
+    var images = Slideshow.find({name: name}, {sort: {i: 1}}).fetch();
     console.log(images)
     
     var src = images.map(function (image) {
@@ -163,18 +172,21 @@ if (Meteor.isServer) {
   Meteor.publish("slideshow", function () {
     return Slideshow.find({}, {sort: {i: 1}})
   })
+  
+  console.log(Meteor)
+  
     
   // The slideshow
   // Remove all selected images at startup and pick 3
   Meteor.startup(function () {
     
-    var get = function (count, from) {
-      var got = Images.find({order: {$gt: from}}, {sort: {order: 1}, limit: count}).fetch()
+    var get = function (name, count, from) {
+      var got = Images.find({name: name, order: {$gt: from}}, {sort: {order: 1}, limit: count}).fetch()
       if (from < 0 && got.length === 0) {
         return []
       }
       if (got.length < count && from != 0) {
-        get(count - got.length, -1).forEach(function (item) {
+        get(name, count - got.length, -1).forEach(function (item) {
           got.push(item)
         })
       }
@@ -182,9 +194,9 @@ if (Meteor.isServer) {
     }
     
     //put 3 images into the slideshow
-    var reset = function (from) {
-      Slideshow.remove({})
-      get(3, from).forEach(function (image, i) {
+    var reset = function (name, from) {
+      Slideshow.remove({name: name})
+      get(name, 3, from).forEach(function (image, i) {
         Slideshow.insert({
           path: image.path,
           order: image.order,
@@ -193,10 +205,10 @@ if (Meteor.isServer) {
       })
     }
 
-    var update = function () {
-      var current = Slideshow.findOne({}, {sort: {i: 1}});
+    var update = function (name) {
+      var current = Slideshow.findOne({name: name}, {sort: {i: 1}});
       if (current != undefined)
-        reset(current.order)
+        reset(name, current.order)
       else
         reset(-1)
     }
@@ -207,9 +219,18 @@ if (Meteor.isServer) {
       })
     }
     
-    reset()
+    var names = _.uniq(Images.find({}, {fields: {name: true}}).fetch().map(function (image) {
+      return image.name 
+    }), true)
+    console.log("unique names: ", names)
+    names.forEach(function (name) {
+      reset(name)
+    })
+    
     setInterval(BIND(function () {
-      update()
+      names.forEach(function (name) {
+        update(name)
+      })
       prt()
     }), 5000)
   })

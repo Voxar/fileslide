@@ -56,22 +56,34 @@ FileSlide = {
   },
   merge: function (diskFiles, dbFiles) {
     var mapFunc = function (path) {
-      return FileSlide.fileName(path).path
+      return FileSlide.fileName(path)
     }
     diskFiles = diskFiles.map(mapFunc)
     dbFiles = dbFiles.map(mapFunc)
     
     console.log("Merging", diskFiles, dbFiles)
     
-    diskFiles.map(function (path) {
-      if (dbFiles.indexOf(path) === -1) {
-        FileSlide.add(path);
+    diskFiles.forEach(function (pos) {
+      var found = 0
+      dbFiles.forEach(function (dbPos) {
+        if (pos.name === dbPos.name && pos.path === dbPos.path) {
+          found++;
+        }
+      })
+      if (found == 0) {
+        FileSlide.add(pos.path);
       }
     })
     
-    dbFiles.map(function (path) {
-      if (diskFiles.indexOf(path) === -1) {
-        FileSlide.remove(path);
+    dbFiles.forEach(function (pos) {
+      var found = 0
+      diskFiles.forEach(function (diskPos) {
+        if (pos.name === diskPos.name && pos.path === diskPos.path) {
+          found++;
+        }
+      })
+      if (found == 0) {
+        FileSlide.remove(pos.path);
       }
     })
   },
@@ -232,9 +244,19 @@ if (Meteor.isServer) {
       }
       
       var update = function () {
-        _.uniq(Images.find({}, {fields: {name: true}}).fetch().map(function (image) {
+        var slideNames = _.uniq(Slideshow.find({}, {fields: {name: true}}).fetch().map(function (image) {
           return image.name 
-        }), true).forEach(function (name) {
+        }), true)
+        var imageNames = _.uniq(Images.find({}, {fields: {name: true}}).fetch().map(function (image) {
+          return image.name 
+        }), true)
+        console.log("names:", imageNames, slideNames)
+        slideNames.forEach(function (slideName) {
+          if (imageNames.indexOf(slideName) == -1) {
+            Slideshow.remove({name: slideName})
+          }
+        })
+        imageNames.forEach(function (name) {
           _update(name)
         })
         prt()

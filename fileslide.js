@@ -70,8 +70,9 @@ FileSlide = {
   fileName: function (filePath) {
     var Path = Meteor.npmRequire('path')
     var path = filePath.replace(this.path() + "/", "")
-    var name = "name"  
-      return {path: path, name: name}
+    var name = Path.dirname(path)
+    if (name == ".") name = ""
+    return {path: path, name: name}
   },
   images: function (page) {
     return Images.find().fetch()

@@ -164,12 +164,15 @@ if (Meteor.isClient) {
       var newSrc = "/images/" + image.path;
       var oldSrc = visible.attr("src");
     
-      hidden.attr("src", newSrc).fadeIn("slow", function () {
-        $(this).removeClass("hidden")
-      })
-      visible.attr("src", oldSrc).fadeOut("slow", function () {
-        $(this).addClass("hidden")
-      })
+    console.log(newSrc, oldSrc)
+      if (newSrc !== oldSrc) {
+        hidden.attr("src", newSrc).fadeIn("slow", function () {
+          $(this).removeClass("hidden")
+        })
+        visible.attr("src", oldSrc).fadeOut("slow", function () {
+          $(this).addClass("hidden")
+        })
+      }
     }
     
     if (images.length > 0) {

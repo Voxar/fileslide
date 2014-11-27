@@ -1,3 +1,6 @@
+// The duration per image, in seconds
+IMAGE_TIME_SECONDS = 5
+
 Images = new Mongo.Collection('images');
 Slideshow = new Mongo.Collection('slideshow')
 
@@ -205,6 +208,7 @@ if (Meteor.isServer) {
       
     
   Meteor.startup(function () {
+    var fileslide_pid = 0
     var start_fileslide = function () {
       var get = function (name, count, from) {
         console.log("get", name, count, from)
@@ -268,8 +272,9 @@ if (Meteor.isServer) {
         })
       }
     
+      clearInterval(fileslide_pid)
       update()
-      setInterval(BIND(update), 5000)
+      fileslide_pid = setInterval(BIND(update), 1000 * IMAGE_TIME_SECONDS)
     }
     
     console.log("Images path is ", FileSlide.path())

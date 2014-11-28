@@ -209,9 +209,8 @@ if (Meteor.isServer) {
   console.log(Meteor)
   
       
-    
+  var fileslide_pid = 0
   Meteor.startup(function () {
-    var fileslide_pid = 0
     var start_fileslide = function () {
       var get = function (name, count, from) {
         console.log("get", name, count, from)
